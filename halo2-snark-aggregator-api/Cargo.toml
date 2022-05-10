@@ -8,7 +8,7 @@ authors = ["zhangjunyu <junyu92@gmail.com>"]
 blake2b_simd = "1"
 chrono = "0.4.19"
 group = "0.11"
-halo2_proofs = { git = "https://github.com/junyu0312/halo2", rev = "3f6196fed5a61b7f86eb56848b4193d7a7b830d9", default-features = true }
+halo2_proofs = { git = "https://github.com/junyu0312/halo2", rev = "7cfeca346dac2d96932f7039571b41f4eb780c47", default-features = true }
 pairing_bn256 = { git = "https://github.com/appliedzkp/pairing" }
 rand = "0.8"
 rand_pcg = "0.3.1"

@@ -15,7 +15,7 @@ use halo2_ecc_circuit_lib::{
     gates::{base_gate::Context, range_gate::RangeGateConfig},
 };
 use halo2_proofs::circuit::floor_planner::V1;
-use halo2_proofs::plonk::{Column, Instance};
+//use halo2_proofs::plonk::{Column, Instance};
 use halo2_proofs::{
     arithmetic::BaseExt,
     plonk::{keygen_pk, verify_proof, SingleVerifier},
@@ -39,7 +39,7 @@ use halo2_snark_aggregator_api::systems::halo2::{
 };
 use pairing_bn256::group::Curve;
 use rand_core::OsRng;
-use serde_json::json;
+//use serde_json::json;
 use std::{
     io::{Read, Write},
     marker::PhantomData,
@@ -51,7 +51,7 @@ const COMMON_RANGE_BITS: usize = 17usize;
 struct Halo2VerifierCircuitConfig {
     base_gate_config: FiveColumnBaseGateConfig,
     range_gate_config: RangeGateConfig,
-    instance: Column<Instance>,
+    //instance: Column<Instance>,
 }
 
 #[derive(Clone)]
@@ -97,7 +97,7 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
         Self::Config {
             base_gate_config,
             range_gate_config,
-            instance,
+            //instance,
         }
     }
 
@@ -194,35 +194,36 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
             },
         )?;
 
+        /*
         let w_x = w_x.unwrap();
         let w_g = w_g.unwrap();
+                {
+                    let mut layouter = layouter.namespace(|| "expose");
+                    for i in 0..LIMBS {
+                        layouter.constrain_instance(w_x.x.limbs_le[i].cell, config.instance, i)?;
+                    }
 
-        {
-            let mut layouter = layouter.namespace(|| "expose");
-            for i in 0..LIMBS {
-                layouter.constrain_instance(w_x.x.limbs_le[i].cell, config.instance, i)?;
-            }
+                    for i in 0..LIMBS {
+                        layouter.constrain_instance(w_x.y.limbs_le[i].cell, config.instance, i + LIMBS)?;
+                    }
 
-            for i in 0..LIMBS {
-                layouter.constrain_instance(w_x.y.limbs_le[i].cell, config.instance, i + LIMBS)?;
-            }
+                    for i in 0..LIMBS {
+                        layouter.constrain_instance(
+                            w_g.x.limbs_le[i].cell,
+                            config.instance,
+                            i + LIMBS * 2,
+                        )?;
+                    }
 
-            for i in 0..LIMBS {
-                layouter.constrain_instance(
-                    w_g.x.limbs_le[i].cell,
-                    config.instance,
-                    i + LIMBS * 2,
-                )?;
-            }
-
-            for i in 0..LIMBS {
-                layouter.constrain_instance(
-                    w_g.y.limbs_le[i].cell,
-                    config.instance,
-                    i + LIMBS * 3,
-                )?;
-            }
-        }
+                    for i in 0..LIMBS {
+                        layouter.constrain_instance(
+                            w_g.y.limbs_le[i].cell,
+                            config.instance,
+                            i + LIMBS * 3,
+                        )?;
+                    }
+                }
+        */
         Ok(())
     }
 }
@@ -381,7 +382,7 @@ pub(crate) fn verify_circuit_setup<C: CurveAffine, E: MultiMillerLoop<G1Affine =
     }
 }
 
-pub(crate) fn calc_verify_circuit_instances<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
+pub fn calc_verify_circuit_instances<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
     params: &ParamsVerifier<E>,
     vk: &VerifyingKey<C>,
     n_instances: Vec<Vec<Vec<Vec<E::Scalar>>>>,
@@ -453,14 +454,14 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
 ) {
     let now = std::time::Instant::now();
     let sample_circuit_info = load_sample_circuit_info::<C, E>(&mut folder, nproofs, false);
-
-    let instances = calc_verify_circuit_instances(
-        &sample_circuit_info.0,
-        &sample_circuit_info.1,
-        sample_circuit_info.2.clone(),
-        sample_circuit_info.3.clone(),
-    );
-
+    /*
+        let instances = calc_verify_circuit_instances(
+            &sample_circuit_info.0,
+            &sample_circuit_info.1,
+            sample_circuit_info.2.clone(),
+            sample_circuit_info.3.clone(),
+        );
+    */
     let verify_circuit = verify_circuit_builder(
         &sample_circuit_info.0,
         &sample_circuit_info.1,
@@ -495,7 +496,7 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
     let elapsed_time = now.elapsed();
     println!("Running keygen_pk took {} seconds.", elapsed_time.as_secs());
 
-    let instances: &[&[&[C::ScalarExt]]] = &[&[&instances[..]]];
+    let instances: &[&[&[C::ScalarExt]]] = &[]; //&[&[&instances[..]]];
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
     create_proof(
         &verify_circuit_params,
@@ -520,7 +521,7 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
         folder.pop();
         fd.write_all(&proof).unwrap();
     }
-
+    /*
     {
         folder.push(format!("verify_circuit_instance.data"));
         let mut fd = std::fs::File::create(folder.as_path()).unwrap();
@@ -541,6 +542,7 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
             .collect::<Vec<Vec<Vec<Vec<u8>>>>>());
         write!(fd, "{}", instances.to_string()).unwrap();
     }
+    */
 }
 
 pub(crate) fn verify_circuit_check<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
@@ -548,30 +550,16 @@ pub(crate) fn verify_circuit_check<C: CurveAffine, E: MultiMillerLoop<G1Affine =
     _nproofs: usize,
 ) {
     let verify_circuit_params = load_params::<C>(&mut folder, "verify_circuit.params");
-    let verify_circuit_instance = load_instances::<E>(&mut folder, "verify_circuit_instance.data");
+    //let verify_circuit_instance = load_instances::<E>(&mut folder, "verify_circuit_instance.data");
+    let verify_circuit_instance: Vec<Vec<Vec<E::Scalar>>> = vec![];
     let verify_circuit_transcript = load_transcript::<C>(&mut folder, "verify_circuit_proof.data");
-    /*
-    let sample_circuit_info = load_sample_circuit_info::<C, E>(&mut folder, nproofs, false);
-
-    let verify_circuit = verify_circuit_builder(
-        &sample_circuit_info.0,
-        &sample_circuit_info.1,
-        &sample_circuit_info.2,
-        &sample_circuit_info.3,
-        nproofs,
-    );*/
-
-    let verify_circuit_vk =
-        //keygen_vk(&verify_circuit_params, &verify_circuit).expect("keygen_vk //should not fail");
-            // issue see https://github.com/zcash/halo2/issues/449
-    {
+    let verify_circuit_vk = {
         folder.push("verify_circuit.vkey");
         let mut fd = std::fs::File::open(folder.as_path()).unwrap();
         folder.pop();
-        VerifyingKey::<C>::read::<_, Halo2VerifierCircuit<'_, E>>(&mut fd, &verify_circuit_params).unwrap()
+        VerifyingKey::<C>::read::<_, Halo2VerifierCircuit<'_, E>>(&mut fd, &verify_circuit_params)
+            .unwrap()
     };
-
-    println!("build vk done");
 
     let params = verify_circuit_params.verifier::<E>(LIMBS * 4).unwrap();
     let strategy = SingleVerifier::new(&params);
