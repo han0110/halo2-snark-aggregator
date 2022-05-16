@@ -15,7 +15,7 @@ use halo2_ecc_circuit_lib::{
     gates::{base_gate::Context, range_gate::RangeGateConfig},
 };
 use halo2_proofs::circuit::floor_planner::V1;
-//use halo2_proofs::plonk::{Column, Instance};
+use halo2_proofs::plonk::{Column, Instance};
 use halo2_proofs::{
     arithmetic::BaseExt,
     plonk::{keygen_pk, verify_proof, SingleVerifier},
@@ -39,7 +39,7 @@ use halo2_snark_aggregator_api::systems::halo2::{
 };
 use pairing_bn256::group::Curve;
 use rand_core::OsRng;
-//use serde_json::json;
+use serde_json::json;
 use std::{
     io::{Read, Write},
     marker::PhantomData,
@@ -51,7 +51,7 @@ const COMMON_RANGE_BITS: usize = 17usize;
 struct Halo2VerifierCircuitConfig {
     base_gate_config: FiveColumnBaseGateConfig,
     range_gate_config: RangeGateConfig,
-    //instance: Column<Instance>,
+    instance: Column<Instance>,
 }
 
 #[derive(Clone)]
@@ -97,7 +97,7 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
         Self::Config {
             base_gate_config,
             range_gate_config,
-            //instance,
+            instance,
         }
     }
 
@@ -194,7 +194,6 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
             },
         )?;
 
-        /*
         let w_x = w_x.unwrap();
         let w_g = w_g.unwrap();
                 {
@@ -223,7 +222,6 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
                         )?;
                     }
                 }
-        */
         Ok(())
     }
 }
@@ -521,7 +519,7 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
         folder.pop();
         fd.write_all(&proof).unwrap();
     }
-    /*
+
     {
         folder.push(format!("verify_circuit_instance.data"));
         let mut fd = std::fs::File::create(folder.as_path()).unwrap();
@@ -542,7 +540,6 @@ pub(crate) fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C
             .collect::<Vec<Vec<Vec<Vec<u8>>>>>());
         write!(fd, "{}", instances.to_string()).unwrap();
     }
-    */
 }
 
 pub(crate) fn verify_circuit_check<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
