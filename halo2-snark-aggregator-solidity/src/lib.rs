@@ -9,6 +9,7 @@ use crate::code_generator::linear_scan::memory_optimize;
 use crate::code_generator::linearize_memory::linearize_memory;
 use crate::transcript::poseidon::PoseidonTranscriptRead;
 use code_generator::ctx::{CodeGeneratorCtx, G2Point};
+use halo2_ecc_circuit_lib::five::integer_chip::LIMBS;
 use halo2_proofs::arithmetic::{BaseExt, Field};
 use halo2_proofs::arithmetic::{CurveAffine, MultiMillerLoop};
 use halo2_proofs::plonk::VerifyingKey;
@@ -93,7 +94,7 @@ pub fn verify_circuit_sol_generator<C: CurveAffine, E: MultiMillerLoop<G1Affine 
     };
 
     let params = verify_circuit_params
-        .verifier::<E>(verify_circuit_vk.cs.num_instance_columns)
+        .verifier::<E>(LIMBS * 4)
         .unwrap();
 
     let nchip = &SolidityFieldChip::new();
