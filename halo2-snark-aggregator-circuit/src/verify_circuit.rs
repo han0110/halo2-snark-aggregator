@@ -196,32 +196,32 @@ impl<'a, C: CurveAffine, E: MultiMillerLoop<G1Affine = C>> Circuit<C::ScalarExt>
 
         let w_x = w_x.unwrap();
         let w_g = w_g.unwrap();
-                {
-                    let mut layouter = layouter.namespace(|| "expose");
-                    for i in 0..LIMBS {
-                        layouter.constrain_instance(w_x.x.limbs_le[i].cell, config.instance, i)?;
-                    }
+        {
+            let mut layouter = layouter.namespace(|| "expose");
+            for i in 0..LIMBS {
+                layouter.constrain_instance(w_x.x.limbs_le[i].cell, config.instance, i)?;
+            }
 
-                    for i in 0..LIMBS {
-                        layouter.constrain_instance(w_x.y.limbs_le[i].cell, config.instance, i + LIMBS)?;
-                    }
+            for i in 0..LIMBS {
+                layouter.constrain_instance(w_x.y.limbs_le[i].cell, config.instance, i + LIMBS)?;
+            }
 
-                    for i in 0..LIMBS {
-                        layouter.constrain_instance(
-                            w_g.x.limbs_le[i].cell,
-                            config.instance,
-                            i + LIMBS * 2,
-                        )?;
-                    }
+            for i in 0..LIMBS {
+                layouter.constrain_instance(
+                    w_g.x.limbs_le[i].cell,
+                    config.instance,
+                    i + LIMBS * 2,
+                )?;
+            }
 
-                    for i in 0..LIMBS {
-                        layouter.constrain_instance(
-                            w_g.y.limbs_le[i].cell,
-                            config.instance,
-                            i + LIMBS * 3,
-                        )?;
-                    }
-                }
+            for i in 0..LIMBS {
+                layouter.constrain_instance(
+                    w_g.y.limbs_le[i].cell,
+                    config.instance,
+                    i + LIMBS * 3,
+                )?;
+            }
+        }
         Ok(())
     }
 }
@@ -452,14 +452,14 @@ pub fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
 ) {
     let now = std::time::Instant::now();
     let sample_circuit_info = load_sample_circuit_info::<C, E>(&mut folder, nproofs, false);
-    /*
-        let instances = calc_verify_circuit_instances(
-            &sample_circuit_info.0,
-            &sample_circuit_info.1,
-            sample_circuit_info.2.clone(),
-            sample_circuit_info.3.clone(),
-        );
-    */
+
+    let instances = calc_verify_circuit_instances(
+        &sample_circuit_info.0,
+        &sample_circuit_info.1,
+        sample_circuit_info.2.clone(),
+        sample_circuit_info.3.clone(),
+    );
+
     let verify_circuit = verify_circuit_builder(
         &sample_circuit_info.0,
         &sample_circuit_info.1,
@@ -494,7 +494,7 @@ pub fn verify_circuit_run<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
     let elapsed_time = now.elapsed();
     println!("Running keygen_pk took {} seconds.", elapsed_time.as_secs());
 
-    let instances: &[&[&[C::ScalarExt]]] = &[]; //&[&[&instances[..]]];
+    let instances: &[&[&[C::ScalarExt]]] = &[&[&instances[..]]];
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
     create_proof(
         &verify_circuit_params,
@@ -547,8 +547,7 @@ pub fn verify_circuit_check<C: CurveAffine, E: MultiMillerLoop<G1Affine = C>>(
     _nproofs: usize,
 ) {
     let verify_circuit_params = load_params::<C>(&mut folder, "verify_circuit.params");
-    //let verify_circuit_instance = load_instances::<E>(&mut folder, "verify_circuit_instance.data");
-    let verify_circuit_instance: Vec<Vec<Vec<E::Scalar>>> = vec![];
+    let verify_circuit_instance = load_instances::<E>(&mut folder, "verify_circuit_instance.data");
     let verify_circuit_transcript = load_transcript::<C>(&mut folder, "verify_circuit_proof.data");
     let verify_circuit_vk = {
         folder.push("verify_circuit.vkey");
