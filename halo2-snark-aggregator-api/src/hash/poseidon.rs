@@ -114,7 +114,7 @@ impl<A: ArithFieldChip, const T: usize, const RATE: usize> PoseidonState<A, T, R
         &mut self,
         ctx: &mut A::Context,
         chip: &A,
-        mds: &SparseMDSMatrix<A::Value, T, RATE>,
+        mds: &SparseMDSMatrix<A::Field, T, RATE>,
     ) -> Result<(), A::Error> {
         let a = self
             .s
@@ -143,7 +143,7 @@ impl<A: ArithFieldChip, const T: usize, const RATE: usize> PoseidonState<A, T, R
 
 pub struct PoseidonChip<A: ArithFieldChip, const T: usize, const RATE: usize> {
     state: PoseidonState<A, T, RATE>,
-    spec: Spec<A::Value, T, RATE>,
+    spec: Spec<A::Field, T, RATE>,
     absorbing: Vec<A::AssignedValue>,
 }
 
