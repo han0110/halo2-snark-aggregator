@@ -453,7 +453,7 @@ impl<
                 .gates
                 .iter()
                 .map(|gate| {
-                    gate.polys
+                    gate.polynomials()
                         .iter()
                         .map(|expr| self.convert_expression(expr.clone()))
                         .collect::<Result<Vec<_>, _>>()
@@ -469,7 +469,7 @@ impl<
                 .cs
                 .instance_queries
                 .iter()
-                .map(|column| (column.0.index, column.1 .0 as i32))
+                .map(|column| (column.0.index(), column.1 .0 as i32))
                 .collect(),
             advice_commitments,
             advice_evals,
@@ -478,7 +478,7 @@ impl<
                 .cs
                 .advice_queries
                 .iter()
-                .map(|column| (column.0.index, column.1 .0 as i32))
+                .map(|column| (column.0.index(), column.1 .0 as i32))
                 .collect(),
             fixed_commitments,
             fixed_evals,
@@ -487,7 +487,7 @@ impl<
                 .cs
                 .fixed_queries
                 .iter()
-                .map(|column| (column.0.index, column.1 .0 as i32))
+                .map(|column| (column.0.index(), column.1 .0 as i32))
                 .collect(),
             permutation_commitments: self
                 .vk

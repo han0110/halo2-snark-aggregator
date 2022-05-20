@@ -6,3 +6,13 @@ members = [
     "halo2-snark-aggregator-circuit",
     "halo2-snark-aggregator-solidity",
 ]
+
+[patch.crates-io]
+bitvec = { git = "https://github.com/ed255/bitvec.git", rev = "5cfc5fa8496c66872d21905e677120fc3e79693c" }
+
+[patch."https://github.com/appliedzkp/halo2.git"]
+halo2_proofs = { git = "https://github.com/han0110/halo2", branch = "feature/latest-for-aggregator", default-features = true }
+
+[patch."https://github.com/appliedzkp/zkevm-circuits.git"]
+zkevm-circuits = { git = "https://github.com/han0110/zkevm-circuits", branch = "feature/use-constant-for-randomness" }
+eth-types = { git = "https://github.com/han0110/zkevm-circuits", branch = "feature/use-constant-for-randomness" }
