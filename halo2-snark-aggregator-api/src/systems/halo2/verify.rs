@@ -22,8 +22,8 @@ use std::marker::PhantomData;
 use std::vec;
 pub struct VerifierParamsBuilder<
     'a,
-    E: MultiMillerLoop,
-    A: ArithEccChip<Point = E::G1Affine>,
+    C: CurveAffine,
+    A: ArithEccChip<Point = C>,
     T: TranscriptRead<A>,
 > {
     ctx: &'a mut A::Context,
@@ -31,8 +31,7 @@ pub struct VerifierParamsBuilder<
     schip: &'a A::ScalarChip,
     pchip: &'a A,
     assigned_instances: Vec<Vec<A::AssignedPoint>>,
-    vk: &'a VerifyingKey<E::G1Affine>,
-    params: &'a ParamsVerifier<E>,
+    vk: &'a VerifyingKey<C>,
     transcript: &'a mut T,
     key: String,
 }
@@ -40,14 +39,10 @@ pub struct VerifierParamsBuilder<
 // Follow the sequence of official halo2
 impl<
         'a,
-        E: MultiMillerLoop,
-        A: ArithEccChip<
-            Point = E::G1Affine,
-            Scalar = <E::G1Affine as CurveAffine>::ScalarExt,
-            Native = <E::G1Affine as CurveAffine>::ScalarExt,
-        >,
+        C: CurveAffine,
+        A: ArithEccChip<Point = C, Scalar = C::ScalarExt, Native = C::ScalarExt>,
         T: TranscriptRead<A>,
-    > VerifierParamsBuilder<'a, E, A, T>
+    > VerifierParamsBuilder<'a, C, A, T>
 {
     fn init_transcript(&mut self) -> Result<(), A::Error> {
         let mut hasher = blake2b_simd::Params::new()
@@ -60,7 +55,7 @@ impl<
         hasher.update(&(s.len() as u64).to_le_bytes());
         hasher.update(s.as_bytes());
 
-        let scalar = E::Scalar::from_bytes_wide(hasher.finalize().as_array());
+        let scalar = C::Scalar::from_bytes_wide(hasher.finalize().as_array());
         let assigned_scalar = self.schip.assign_const(self.ctx, scalar)?;
         self.transcript
             .common_scalar(self.ctx, self.nchip, self.schip, &assigned_scalar)?;
@@ -409,7 +404,7 @@ impl<
         let y = self.squeeze_challenge_scalar()?;
         let h_commitments = self.load_n_points(self.vk.domain.get_quotient_poly_degree())?;
         let l = self.vk.cs.blinding_factors() as u32 + 1;
-        let n = self.params.n as u32;
+        let n = self.vk.domain.empty_lagrange().len() as u32;
         let omega = self.vk.domain.get_omega();
 
         let x = self.squeeze_challenge_scalar()?;
@@ -509,10 +504,9 @@ impl<
             beta,
             gamma,
             theta,
-            delta: self.schip.assign_const(
-                self.ctx,
-                <<E::G1Affine as CurveAffine>::ScalarExt as FieldExt>::DELTA,
-            )?,
+            delta: self
+                .schip
+                .assign_const(self.ctx, <C::ScalarExt as FieldExt>::DELTA)?,
             x,
             x_next,
             x_last,
@@ -525,16 +519,11 @@ impl<
                 .schip
                 .assign_const(self.ctx, self.vk.domain.get_omega())?,
             w,
-            zero: self
+            zero: self.schip.assign_const(self.ctx, C::ScalarExt::zero())?,
+            one: self.schip.assign_const(self.ctx, C::ScalarExt::one())?,
+            n: self
                 .schip
-                .assign_const(self.ctx, <E::G1Affine as CurveAffine>::ScalarExt::zero())?,
-            one: self
-                .schip
-                .assign_const(self.ctx, <E::G1Affine as CurveAffine>::ScalarExt::one())?,
-            n: self.schip.assign_const(
-                self.ctx,
-                <E::G1Affine as CurveAffine>::ScalarExt::from(n as u64),
-            )?,
+                .assign_const(self.ctx, C::ScalarExt::from(n as u64))?,
         })
     }
 }
@@ -575,12 +564,8 @@ pub fn assign_instance_commitment<
 }
 
 pub fn verify_single_proof_no_eval<
-    E: MultiMillerLoop,
-    A: ArithEccChip<
-        Point = E::G1Affine,
-        Scalar = <E::G1Affine as CurveAffine>::ScalarExt,
-        Native = <E::G1Affine as CurveAffine>::ScalarExt,
-    >,
+    C: CurveAffine,
+    A: ArithEccChip<Point = C, Scalar = C::ScalarExt, Native = C::ScalarExt>,
     T: TranscriptRead<A>,
 >(
     ctx: &mut A::Context,
@@ -588,11 +573,10 @@ pub fn verify_single_proof_no_eval<
     schip: &A::ScalarChip,
     pchip: &A,
     assigned_instances: Vec<Vec<A::AssignedPoint>>,
-    vk: &VerifyingKey<E::G1Affine>,
-    params: &ParamsVerifier<E>,
+    vk: &VerifyingKey<C>,
     transcript: &mut T,
     key: String,
-) -> Result<MultiOpenProof<A>, A::Error> {
+) -> Result<(VerifierParams<A>, MultiOpenProof<A>), A::Error> {
     let params_builder = VerifierParamsBuilder {
         ctx,
         nchip,
@@ -600,13 +584,13 @@ pub fn verify_single_proof_no_eval<
         pchip,
         assigned_instances,
         vk,
-        params,
         transcript,
         key,
     };
 
     let chip_params = params_builder.build_params()?;
-    chip_params.batch_multi_open_proofs(ctx, schip)
+    let proof = chip_params.batch_multi_open_proofs(ctx, schip)?;
+    Ok((chip_params, proof))
 }
 
 fn evaluate_multiopen_proof<
@@ -680,14 +664,13 @@ pub fn verify_single_proof_in_chip<
 ) -> Result<(A::AssignedPoint, A::AssignedPoint), A::Error> {
     let assigned_instances = assign_instance_commitment(ctx, pchip, instances, vk, params)?;
 
-    let proof = verify_single_proof_no_eval(
+    let (_, proof) = verify_single_proof_no_eval(
         ctx,
         nchip,
         schip,
         pchip,
         assigned_instances,
         vk,
-        params,
         transcript,
         "".to_owned(),
     )?;
@@ -728,7 +711,7 @@ pub fn verify_aggregation_proofs_in_chip<
     mut proofs: Vec<ProofData<E, A, T>>,
     transcript: &mut T,
 ) -> Result<(A::AssignedPoint, A::AssignedPoint), A::Error> {
-    let multiopen_proofs: Vec<MultiOpenProof<A>> = proofs
+    let multiopen_proofs: Vec<_> = proofs
         .iter_mut()
         .map(|proof| {
             let instances1: Vec<Vec<&[E::Scalar]>> = proof
@@ -748,7 +731,6 @@ pub fn verify_aggregation_proofs_in_chip<
                 pchip,
                 assigned_instances,
                 vk,
-                params,
                 &mut proof.transcript,
                 proof.key.clone(),
             )
@@ -765,7 +747,7 @@ pub fn verify_aggregation_proofs_in_chip<
     let aggregation_challenge = transcript.squeeze_challenge_scalar(ctx, nchip, schip)?;
 
     let mut acc: Option<MultiOpenProof<A>> = None;
-    for proof in multiopen_proofs.into_iter() {
+    for (_, proof) in multiopen_proofs.into_iter() {
         acc = match acc {
             None => Some(proof),
             Some(acc) => Some(MultiOpenProof {
