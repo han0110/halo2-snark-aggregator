@@ -655,6 +655,14 @@ impl<'a, W: BaseExt, N: FieldExt> IntegerChipOps<W, N> for FiveColumnIntegerChip
         a: &AssignedInteger<W, N>,
         b: &AssignedInteger<W, N>,
     ) -> Result<AssignedInteger<W, N>, Error> {
+        let a = if a.overflows + (b.overflows + 1) + 1 == OVERFLOW_LIMIT {
+            let mut a = a.clone();
+            self.reduce(ctx, &mut a)?;
+            a
+        } else {
+            a.clone()
+        };
+
         let one = N::one();
         let upper_limbs = self.find_w_modulus_ceil(b);
 
